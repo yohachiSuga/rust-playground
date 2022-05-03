@@ -412,13 +412,20 @@ fn _cell_sample() {
     sample.write_log();
 }
 
+mod enum_sample;
+
+fn enums() {
+    enum_sample::enum_sample();
+}
+
 fn main() {
     // exp_aup();
 
     // _quicksort();
     // _error_test_ext();
     // _mod();
-    _cell_sample();
+    // _cell_sample();
+    enums();
     // looptest();
     // movetest()
     // thread();
