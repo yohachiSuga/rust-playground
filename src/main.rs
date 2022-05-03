@@ -1,8 +1,9 @@
 use std::{
     any::TypeId,
+    cell::{Cell, RefCell},
     error::Error,
     fmt::{write, Debug, Result},
-    fs::File,
+    fs::{File, OpenOptions},
     io::{BufWriter, Write},
     path::Path,
     thread, vec,
@@ -349,18 +350,75 @@ fn error_test(num: u32) -> my_error::Result<()> {
     Ok(())
 }
 
-fn error_test_ext() {
+fn _error_test_ext() {
     if let Err(error) = error_test(99) {
         println!("playground error {}", error.to_string());
     }
+}
+
+mod util;
+fn _mod() {
+    util::print::print_hello();
+}
+
+fn _cell_sample() {
+    struct Sample {
+        counter: usize,
+        cell_counter: Cell<usize>,
+        log: RefCell<File>,
+    }
+
+    impl Sample {
+        fn new() -> Sample {
+            // let file = File::open("tmp").unwrap();
+            let file = OpenOptions::new()
+                .create(true)
+                .write(true)
+                .open("tmp")
+                .unwrap();
+            Sample {
+                counter: 0,
+                cell_counter: Cell::new(0),
+                log: RefCell::new(file),
+            }
+        }
+
+        fn mut_execute(&mut self) {
+            self.counter = self.counter + 1;
+            println!("counter:{}", self.counter);
+        }
+
+        fn cell_execute(&self) {
+            self.cell_counter.set(self.cell_counter.get() + 1);
+            println!("cell_counter:{}", self.cell_counter.get());
+        }
+
+        fn write_log(&self) {
+            // self.log.write("abc".as_bytes());
+            let mut file = self.log.borrow_mut();
+            let mut temp = "abc".as_bytes();
+            file.write_all(temp).unwrap();
+            file.flush().unwrap();
+        }
+    }
+
+    let mut mut_sample = Sample::new();
+    mut_sample.mut_execute();
+
+    // cell merit is object is not mut, but can update internal member , caller handle objects as immutable object
+    let sample = Sample::new();
+    sample.cell_execute();
+    sample.cell_execute();
+    sample.write_log();
 }
 
 fn main() {
     // exp_aup();
 
     // _quicksort();
-    error_test_ext();
-
+    // _error_test_ext();
+    // _mod();
+    _cell_sample();
     // looptest();
     // movetest()
     // thread();
