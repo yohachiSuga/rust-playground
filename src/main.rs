@@ -414,20 +414,49 @@ fn _cell_sample() {
 
 mod enum_sample;
 
-fn enums() {
+fn _enums() {
     enum_sample::enum_sample();
 }
 
+mod traits;
+
+fn _traits() {
+    let mut localfile = File::create("hello.txt").unwrap();
+    traits::say_hello(&mut localfile);
+    traits::say_hello_g(&mut localfile);
+
+    let i_str = String::from("hello world");
+    traits::dump(i_str.chars());
+}
+
+mod overload;
+fn _overload() {
+    overload::overload_sample();
+}
+
+mod closure_sample;
+mod collection_sample;
+mod compress;
+mod iterator_sample;
 fn main() {
-    // exp_aup();
+    exp_aup();
 
     // _quicksort();
     // _error_test_ext();
     // _mod();
     // _cell_sample();
-    enums();
+    // _enums();
+    // _traits();
+    // _overload();
+    // compress::compress_sample();
+    // closure_sample::sample();
+    // iterator_sample::sample();
+    collection_sample::sample();
     // looptest();
     // movetest()
     // thread();
     // _reference();
 }
+
+// TODO:
+// read file and then lz4 with fixed block

@@ -7,4 +7,7 @@ edition = "2021"
 
 [dependencies]
 byteorder = "1.4.3"
+lz4 = "1.23.3"
+rand = "0.8.5"
+rayon = "1.5.2"
 thiserror = "1.0.31"
