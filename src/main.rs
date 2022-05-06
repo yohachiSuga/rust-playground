@@ -6,7 +6,9 @@ use std::{
     fs::{File, OpenOptions},
     io::{BufWriter, Write},
     path::Path,
-    thread, vec,
+    thread,
+    time::Instant,
+    vec,
 };
 
 use byteorder::{LittleEndian, WriteBytesExt};
@@ -448,10 +450,17 @@ fn main() {
     // _enums();
     // _traits();
     // _overload();
-    // compress::compress_sample();
+    {
+        let start = Instant::now();
+        compress::compress_sample();
+
+        // compress::parallel_compress();
+        let end = start.elapsed();
+        println!("{}.{} sec", end.as_secs(), end.as_millis());
+    }
     // closure_sample::sample();
     // iterator_sample::sample();
-    collection_sample::sample();
+    // collection_sample::sample();
     // looptest();
     // movetest()
     // thread();
