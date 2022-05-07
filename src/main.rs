@@ -452,9 +452,9 @@ fn main() {
     // _overload();
     {
         let start = Instant::now();
-        compress::compress_sample();
+        // compress::compress_sample();
 
-        // compress::parallel_compress();
+        compress::parallel_compress();
         let end = start.elapsed();
         println!("{}.{} sec", end.as_secs(), end.as_millis());
     }
