@@ -1,11 +1,10 @@
+use lz4::EncoderBuilder;
+use rayon::iter::{ParallelBridge, ParallelIterator};
 use std::{
     collections::HashMap,
     fs::File,
     io::{BufReader, Read, Write},
 };
-
-use lz4::EncoderBuilder;
-use rayon::iter::{ParallelBridge, ParallelIterator};
 
 const BLOCK_SIZE: usize = 64 * 1024;
 const THRESHOLD: f64 = 90.0;
@@ -32,6 +31,7 @@ fn compress(buf: &[u8]) -> Vec<u8> {
     return out;
 }
 
+use crate::util::error::{self, ErrorKind, PlaygroundError};
 // TODO: use thread pool
 pub fn compress_sample() {
     let mut reader = BufReader::new(File::open(FILENAME).unwrap());
@@ -121,6 +121,8 @@ fn _rayon_sample() {
     }
     println!("finish compression length:{} byte", result.len());
     println!("compression table:{:?}", comp_table);
+
+    let err = PlaygroundError::Custom(ErrorKind::UnknownError);
 }
 
 pub fn parallel_compress() {
