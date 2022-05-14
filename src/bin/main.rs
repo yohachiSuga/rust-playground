@@ -1,6 +1,7 @@
 use std::{
     any::TypeId,
     cell::{Cell, RefCell},
+    env,
     error::Error,
     fmt::{write, Debug, Result},
     fs::{File, OpenOptions},
@@ -436,12 +437,19 @@ use byteorder::{LittleEndian, WriteBytesExt};
 //     overload::overload_sample();
 // }
 
+use log::info;
 // mod closure_sample;
 // mod collection_sample;
 // mod compress;
 // mod iterator_sample;
 use playground::package::compress;
+
+fn init_logger() {
+    env::set_var("RUST_LOG", "debug");
+    env_logger::init();
+}
 fn main() {
+    init_logger();
     // exp_aup();
 
     // _quicksort();
@@ -457,7 +465,7 @@ fn main() {
 
         compress::parallel_compress();
         let end = start.elapsed();
-        println!("{}.{} sec", end.as_secs(), end.as_millis());
+        info!("{}.{} sec", end.as_secs(), end.as_millis());
     }
     // closure_sample::sample();
     // iterator_sample::sample();

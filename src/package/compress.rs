@@ -1,3 +1,4 @@
+use log::{debug, error, info};
 use lz4::EncoderBuilder;
 use rayon::iter::{ParallelBridge, ParallelIterator};
 use std::{
@@ -20,14 +21,9 @@ fn compress(buf: &[u8]) -> Vec<u8> {
     encoder.write(buf).unwrap();
     let (out, result) = encoder.finish();
     if let Err(err) = result {
-        println!("error occurred, {:?}", err);
+        error!("error occurred, {:?}", err);
     }
-    // println!(
-    //     "compressed:{:?} len:{}, cap:{}",
-    //     &out[0..10],
-    //     out.len(),
-    //     out.capacity()
-    // );
+
     return out;
 }
 
@@ -51,10 +47,10 @@ pub fn compress_sample() {
                 // good for compress
                 let ratio = (compressed.len() as f64 / n as f64) * 100.0;
                 if ratio <= THRESHOLD {
-                    println!("use compressed, ratio:{}", ratio);
+                    debug!("use compressed, ratio:{}", ratio);
                     result.insert(count, compressed);
                 } else {
-                    println!("not use compressed, ratio:{}", ratio);
+                    debug!("not use compressed, ratio:{}", ratio);
                     result.insert(count, buf.to_vec());
                 }
             }
@@ -66,7 +62,7 @@ pub fn compress_sample() {
 // TODO: add error handle.
 // TODO: add log
 fn _rayon_sample() {
-    println!("rayon sample");
+    debug!("rayon sample");
     let mut reader = BufReader::new(File::open(FILENAME).unwrap());
     let mut buf;
 
@@ -78,7 +74,7 @@ fn _rayon_sample() {
         buf = vec![0; BLOCK_SIZE * 10];
         match reader.read(&mut buf).unwrap() {
             0 => {
-                println!("read but 0 return");
+                debug!("read but 0 return");
                 break;
             }
             n => {
@@ -119,8 +115,8 @@ fn _rayon_sample() {
             }
         }
     }
-    println!("finish compression length:{} byte", result.len());
-    println!("compression table:{:?}", comp_table);
+    info!("finish compression length:{} byte", result.len());
+    debug!("compression table:{:?}", comp_table);
 
     let err = PlaygroundError::Custom(ErrorKind::UnknownError);
 }
