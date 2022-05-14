@@ -63,14 +63,17 @@ pub fn compress_sample() {
 // TODO: add error handle.
 fn _rayon_sample() {
     debug!("rayon sample");
-    let mut reader = BufReader::new(File::open(FILENAME).unwrap());
+    let file = File::open(FILENAME).unwrap();
+    let metadata = file.metadata().unwrap();
+    let mut reader = BufReader::new(file);
     let mut buf;
 
     let mut result = Vec::new();
     let mut src_offset = 0;
     let mut cmp_offset = 0;
     let mut comp_table = Vec::with_capacity(1);
-    let mut is_compressed = AtomicBool::new(false);
+    let is_compressed: AtomicBool = AtomicBool::new(false);
+
     loop {
         buf = vec![0; BLOCK_SIZE * 10];
         match reader.read(&mut buf).unwrap() {
@@ -79,9 +82,7 @@ fn _rayon_sample() {
                 break;
             }
             n => {
-                // remove additional buf
-                let mut compressed = false;
-                buf.truncate(n);
+                // if last block is less than BLOCK_SIZE, already 0-filled
                 let mut data: Vec<(usize, Vec<u8>, usize)> = buf
                     .chunks(BLOCK_SIZE)
                     .enumerate()
@@ -92,6 +93,7 @@ fn _rayon_sample() {
                         let ratio = (compressed_data.len() as f64 / data.len() as f64) * 100.0;
                         if ratio <= THRESHOLD {
                             debug!("use compressed, ratio:{}", ratio);
+                            // if compressed set flag
                             is_compressed.store(true, std::sync::atomic::Ordering::SeqCst);
                             (i, compressed_data, data.len())
                         } else {
@@ -116,14 +118,31 @@ fn _rayon_sample() {
             }
         }
     }
-    info!("finish compression length:{} byte", result.len());
-    info!(
-        "is_compressed:{} ",
-        is_compressed.load(std::sync::atomic::Ordering::SeqCst)
-    );
+
+    let is_compressed_result = is_compressed.load(std::sync::atomic::Ordering::SeqCst);
+    info!("is_compressed:{} ", is_compressed_result);
+    // need to remove
+    if !is_compressed_result {
+        debug!(
+            "all blocks are not compressed, so need to remove additional buffer from last block"
+        );
+        if (metadata.len() as usize) != result.len() {
+            panic!(
+                "read data length and file size is not matched. read data size:{}, file size:{}",
+                metadata.len(),
+                result.len()
+            );
+        }
+        // make read data to original size
+        result.truncate(metadata.len() as usize);
+    }
+
     debug!("compression table:{:?}", comp_table);
+    info!("finish compression length:{} byte", result.len());
 }
 
 pub fn parallel_compress() {
     _rayon_sample();
 }
+
+// TODO: add test
