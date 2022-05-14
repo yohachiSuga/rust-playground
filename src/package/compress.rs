@@ -5,6 +5,7 @@ use std::{
     collections::HashMap,
     fs::File,
     io::{BufReader, Read, Write},
+    sync::atomic::AtomicBool,
 };
 
 const BLOCK_SIZE: usize = 64 * 1024;
@@ -28,7 +29,7 @@ fn compress(buf: &[u8]) -> Vec<u8> {
 }
 
 use crate::util::error::{self, ErrorKind, PlaygroundError};
-// TODO: use thread pool
+// not parallel
 pub fn compress_sample() {
     let mut reader = BufReader::new(File::open(FILENAME).unwrap());
     let mut buf;
@@ -60,7 +61,6 @@ pub fn compress_sample() {
 }
 
 // TODO: add error handle.
-// TODO: add log
 fn _rayon_sample() {
     debug!("rayon sample");
     let mut reader = BufReader::new(File::open(FILENAME).unwrap());
@@ -70,16 +70,16 @@ fn _rayon_sample() {
     let mut src_offset = 0;
     let mut cmp_offset = 0;
     let mut comp_table = Vec::with_capacity(1);
+    let mut is_compressed = AtomicBool::new(false);
     loop {
         buf = vec![0; BLOCK_SIZE * 10];
         match reader.read(&mut buf).unwrap() {
             0 => {
-                debug!("read but 0 return");
+                info!("finish reading");
                 break;
             }
             n => {
                 // remove additional buf
-                // TODO: use flag to compress or not
                 let mut compressed = false;
                 buf.truncate(n);
                 let mut data: Vec<(usize, Vec<u8>, usize)> = buf
@@ -91,10 +91,11 @@ fn _rayon_sample() {
                         let compressed_data = compress(&data);
                         let ratio = (compressed_data.len() as f64 / data.len() as f64) * 100.0;
                         if ratio <= THRESHOLD {
-                            // println!("use compressed, ratio:{}", ratio);
+                            debug!("use compressed, ratio:{}", ratio);
+                            is_compressed.store(true, std::sync::atomic::Ordering::SeqCst);
                             (i, compressed_data, data.len())
                         } else {
-                            // println!("not use compressed, ratio:{}", ratio);
+                            debug!("not use compressed, ratio:{}", ratio);
                             // TODO: it is better that it uses buf memory
                             (i, data.to_vec(), data.len())
                         }
@@ -116,9 +117,11 @@ fn _rayon_sample() {
         }
     }
     info!("finish compression length:{} byte", result.len());
+    info!(
+        "is_compressed:{} ",
+        is_compressed.load(std::sync::atomic::Ordering::SeqCst)
+    );
     debug!("compression table:{:?}", comp_table);
-
-    let err = PlaygroundError::Custom(ErrorKind::UnknownError);
 }
 
 pub fn parallel_compress() {
