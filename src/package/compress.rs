@@ -61,9 +61,9 @@ pub fn compress_sample() {
 }
 
 // TODO: add error handle.
-fn _rayon_sample() {
+fn _rayon_sample(filename: &str) -> (Vec<u8>, Vec<(usize, usize, usize, usize)>) {
     debug!("rayon sample");
-    let file = File::open(FILENAME).unwrap();
+    let file = File::open(filename).unwrap();
     let metadata = file.metadata().unwrap();
     let mut reader = BufReader::new(file);
     let mut buf;
@@ -82,9 +82,9 @@ fn _rayon_sample() {
                 break;
             }
             n => {
-                // if last block is less than BLOCK_SIZE, already 0-filled
-                let mut data: Vec<(usize, Vec<u8>, usize)> = buf
-                    .chunks(BLOCK_SIZE)
+                buf.truncate(n);
+                let iter = buf.chunks_exact(BLOCK_SIZE);
+                let mut data: Vec<(usize, Vec<u8>, usize)> = iter
                     .enumerate()
                     .par_bridge()
                     .map(|(i, data)| {
@@ -103,6 +103,28 @@ fn _rayon_sample() {
                         }
                     })
                     .collect();
+
+                // if last block is less than BLOCK_SIZE, already 0-filled
+                // let mut data: Vec<(usize, Vec<u8>, usize)> = buf
+                //     .chunks(BLOCK_SIZE)
+                //     .enumerate()
+                //     .par_bridge()
+                //     .map(|(i, data)| {
+                //         // println!("count:{}", i);
+                //         let compressed_data = compress(&data);
+                //         let ratio = (compressed_data.len() as f64 / data.len() as f64) * 100.0;
+                //         if ratio <= THRESHOLD {
+                //             debug!("use compressed, ratio:{}", ratio);
+                //             // if compressed set flag
+                //             is_compressed.store(true, std::sync::atomic::Ordering::SeqCst);
+                //             (i, compressed_data, data.len())
+                //         } else {
+                //             debug!("not use compressed, ratio:{}", ratio);
+                //             // TODO: it is better that it uses buf memory
+                //             (i, data.to_vec(), data.len())
+                //         }
+                //     })
+                //     .collect();
                 // result is not in order
                 data.sort_by_key(|d| d.0);
 
@@ -114,6 +136,40 @@ fn _rayon_sample() {
 
                     // move values
                     result.append(&mut d.1)
+                }
+
+                // TODO: bufreader always read expected??
+                // handle last block (TODO: make common)
+                let iter = buf.chunks_exact(BLOCK_SIZE);
+                let remaining_buf = iter.remainder();
+                if remaining_buf.len() > 0 {
+                    // need to 0-fill before comperssion
+                    let mut data = Vec::with_capacity(BLOCK_SIZE);
+                    let mut compressed_data = compress(&data);
+                    let ratio = (compressed_data.len() as f64 / remaining_buf.len() as f64) * 100.0;
+                    if ratio <= THRESHOLD {
+                        debug!("use compressed, ratio:{}", ratio);
+                        // if compressed set flag
+                        is_compressed.store(true, std::sync::atomic::Ordering::SeqCst);
+
+                        // add to compression table
+                        if comp_table.len() >= 1 {
+                            let (last_src, last_src_offset, last_comp, last_comp_offset) =
+                                comp_table.last().unwrap();
+                            comp_table.push((
+                                remaining_buf.len(),
+                                last_src_offset + last_src,
+                                compressed_data.len(),
+                                last_comp_offset + last_comp,
+                            ));
+                        } else {
+                            comp_table.push((remaining_buf.len(), 0, compressed_data.len(), 0));
+                        }
+                        result.append(&mut compressed_data);
+                    } else {
+                        debug!("not use compressed, ratio:{}", ratio);
+                        result.append(&mut remaining_buf.to_vec());
+                    }
                 }
             }
         }
@@ -139,10 +195,28 @@ fn _rayon_sample() {
 
     debug!("compression table:{:?}", comp_table);
     info!("finish compression length:{} byte", result.len());
+    (result, comp_table)
 }
 
 pub fn parallel_compress() {
-    _rayon_sample();
+    _rayon_sample(FILENAME);
 }
 
 // TODO: add test
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn compress_normal() {
+        env_logger::init();
+        let can_compress_text = "./tests/data/compress.txt";
+        let (result, comp_table) = _rayon_sample(can_compress_text);
+        let metadata = File::open(&can_compress_text).unwrap().metadata().unwrap();
+        info!("{} {}", result.len(), metadata.len());
+        assert!(result.len() <= metadata.len() as usize);
+    }
+
+    #[test]
+    fn compress_but_all_data_not_compressed() {}
+}
