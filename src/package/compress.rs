@@ -144,7 +144,7 @@ fn _rayon_sample(filename: &str) -> (Vec<u8>, Vec<(usize, usize, usize, usize)>)
                 let remaining_buf = iter.remainder();
                 if remaining_buf.len() > 0 {
                     // need to 0-fill before comperssion
-                    let mut data = Vec::with_capacity(BLOCK_SIZE);
+                    let ata = Vec::with_capacity(BLOCK_SIZE);
                     let mut compressed_data = compress(&data);
                     let ratio = (compressed_data.len() as f64 / remaining_buf.len() as f64) * 100.0;
                     if ratio <= THRESHOLD {
